@@ -40,6 +40,7 @@ docker-run:
 	docker run --rm \
 	    --network none \
 	    --volume $$(pwd)/workspace:/home/host_user/workspace \
+		--env RUN_ENVIRONMENT=$(RUN_ENVIRONMENT) \
 	    --workdir /home/host_user/workspace/ \
 	    pynb-dag-runner \
 	    "$(COMMAND)"
@@ -49,12 +50,18 @@ clean:
 
 test-library:
 	# Run all tests for library and ensure we can build the library wheel file
+	#
+	# Eg.
+	#   make test-library
+	#   make RUN_ENVIRONMENT=stress-tests test-library
 
-	make COMMAND="(\
-	    cd pynb_dag_runner; \
-	    make \
-	        test-pytest \
-	        test-mypy \
-	        test-black \
-	        build \
+	make \
+	    RUN_ENVIRONMENT=$(RUN_ENVIRONMENT) \
+	    COMMAND="(\
+	        cd pynb_dag_runner; \
+	        make \
+	            test-pytest \
+	            test-mypy \
+	            test-black \
+	            build \
 	)" docker-run

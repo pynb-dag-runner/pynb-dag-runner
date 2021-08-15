@@ -9,6 +9,7 @@ import pytest, ray
 #
 from pynb_dag_runner.helpers import flatten, ranges_intersect
 from pynb_dag_runner.ray_helpers import try_eval_f_async_wrapper, retry_wrapper, Future
+from conftest import repeat_in_stress_tests
 
 
 @ray.remote(num_cpus=0)
@@ -23,7 +24,8 @@ class StateActor:
         return self._state
 
 
-def test_future_map():
+@repeat_in_stress_tests
+def test_future_map(repeat_count):
     @ray.remote(num_cpus=0)
     def f() -> int:
         return 123
@@ -38,7 +40,8 @@ def test_future_map():
 ### tests for try_eval_f_async_wrapper wrapper
 
 
-def test_timeout_w_success():
+@repeat_in_stress_tests
+def test_timeout_w_success(repeat_count):
     def f(x: int) -> int:
         return x + 1
 
@@ -53,7 +56,8 @@ def test_timeout_w_success():
         assert ray.get(f_timeout(ray.put(x))) == 2 * (x + 1)
 
 
-def test_timeout_w_exception():
+@repeat_in_stress_tests
+def test_timeout_w_exception(repeat_count):
     def f(dummy):
         raise Exception(f"BOOM{dummy}")
 
@@ -71,13 +75,10 @@ def test_timeout_w_exception():
             assert f"BOOM{x}" in str(e)
 
 
-# this test has failed randomly (TODO)
-@pytest.mark.parametrize("dummy_loop_parameter", range(1))
+@repeat_in_stress_tests
 @pytest.mark.parametrize("task_timeout_s", [0.001, 10.0])
 @pytest.mark.parametrize("state_type", ["Actor", "File"])
-def test_timeout_w_timeout(
-    tmp_path: Path, dummy_loop_parameter, state_type, task_timeout_s
-):
+def test_timeout_w_timeout(tmp_path: Path, repeat_count, state_type, task_timeout_s):
     class State:
         pass
 
@@ -137,7 +138,8 @@ def test_timeout_w_timeout(
 ### tests for retry_wrapper
 
 
-def test_retry_all_fail():
+@repeat_in_stress_tests
+def test_retry_all_fail(repeat_count):
     results = ray.get(
         retry_wrapper(
             f_task_remote=ray.remote(num_cpus=0)(lambda _: "foo").remote,
@@ -148,7 +150,8 @@ def test_retry_all_fail():
     assert results == ["foo"] * 10
 
 
-def test_retry_all_success():
+@repeat_in_stress_tests
+def test_retry_all_success(repeat_count):
     results = ray.get(
         retry_wrapper(
             f_task_remote=ray.remote(num_cpus=0)(lambda _: "foo").remote,
@@ -159,7 +162,8 @@ def test_retry_all_success():
     assert results == ["foo"]
 
 
-def test_retry_deterministic_success():
+@repeat_in_stress_tests
+def test_retry_deterministic_success(repeat_count):
     results = ray.get(
         retry_wrapper(
             f_task_remote=ray.remote(num_cpus=0)(lambda retry_nr: retry_nr).remote,
@@ -170,7 +174,8 @@ def test_retry_deterministic_success():
     assert results == [0, 1, 2, 3, 4]
 
 
-def test_retry_random():
+@repeat_in_stress_tests
+def test_retry_random(repeat_count):
     for _ in range(10):
         results = ray.get(
             retry_wrapper(
@@ -190,7 +195,8 @@ def test_retry_random():
             assert all(r < 5 for r in results[:-1])  # other is failures
 
 
-def test_multiple_retrys_should_run_in_parallel():
+@repeat_in_stress_tests
+def test_multiple_retrys_should_run_in_parallel(repeat_count):
     def make_f(task_label: str):
         def f(retry_count):
             start_ts = time.time_ns()
@@ -238,8 +244,8 @@ def test_multiple_retrys_should_run_in_parallel():
 ### Test composition of both retry and timeout wrappers
 
 
-@pytest.mark.parametrize("dummy_loop_parameter", range(1))
-def test_retry_and_timeout_composition(dummy_loop_parameter):
+@repeat_in_stress_tests
+def test_retry_and_timeout_composition(repeat_count):
     def f(retry_count):
         if retry_count < 5:
             time.sleep(1e6)  # hang computation

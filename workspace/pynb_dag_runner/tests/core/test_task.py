@@ -7,9 +7,11 @@ from pynb_dag_runner.core.dag_runner import (
     TaskDependence,
     TaskDependencies,
 )
+from conftest import repeat_in_stress_tests
 
 
-def test_task_execute_states():
+@repeat_in_stress_tests
+def test_task_execute_states(repeat_count):
     @ray.remote(num_cpus=0)
     def f():
         time.sleep(0.1)
@@ -37,7 +39,8 @@ def test_task_execute_states():
     assert task.result() == ray.get(task.get_ref()) == 1234
 
 
-def test_task_exceptions_should_propagate():
+@repeat_in_stress_tests
+def test_task_exceptions_should_propagate(repeat_count):
     @ray.remote(num_cpus=0)
     def f():
         raise Exception("BOOM123!")

@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 test-pytest:
-	echo ">> Checking unit tests ..."
+	echo ">> Checking unit tests (RUN_ENVIRONMENT = ${RUN_ENVIRONMENT})"
 	pytest --durations=10 --continue-on-collection-errors tests
 
 test-mypy:

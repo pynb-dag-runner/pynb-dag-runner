@@ -13,8 +13,10 @@ from pynb_dag_runner.core.dag_runner import (
     run_tasks,
 )
 from tests.test_ray_helpers import StateActor
+from conftest import repeat_in_stress_tests
 
 
+@repeat_in_stress_tests
 @pytest.mark.parametrize(
     "task_dependencies",
     [
@@ -26,7 +28,7 @@ from tests.test_ray_helpers import StateActor
         "[task0 >> task1, task1 >> task2, task0 >> task2]",
     ],
 )
-def test_all_tasks_are_run(task_dependencies):
+def test_all_tasks_are_run(repeat_count, task_dependencies):
     def make_task(sleep_secs: float, return_value: int) -> Task[int]:
         @ray.remote(num_cpus=0)
         def f():
@@ -45,8 +47,8 @@ def test_all_tasks_are_run(task_dependencies):
     assert len(result) == 3 and set(result) == set([0, 1, 2])
 
 
-@pytest.mark.parametrize("dummy_loop_parameter", range(1))
-def test_task_run_order(dummy_loop_parameter):
+@repeat_in_stress_tests
+def test_task_run_order(repeat_count):
     state_actor = StateActor.remote()
 
     def make_task(i: int) -> Task[int]:
